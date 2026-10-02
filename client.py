@@ -24,6 +24,22 @@ class Client:
     # валидаторы
 
     @staticmethod
+    def _validate_by_regex(
+        value: str | None,
+        pattern: str,
+        field_name: str,
+        allow_none: bool = False,
+    ) -> bool:
+        # вспомогательный метод для устранения дублирования проверок по регулярным выражениям
+        if allow_none and value is None:
+            return True
+        if not isinstance(value, str):
+            raise TypeError(f"Поле '{field_name}' должно быть строкой.")
+        if not re.match(pattern, value):
+            raise ValueError(f"Некорректный формат поля '{field_name}': {value}")
+        return True
+
+    @staticmethod
     def validate_id(client_id: int) -> bool:
         if not isinstance(client_id, int) or client_id <= 0:
             raise ValueError("ID клиента должен быть положительным целым числом.")
@@ -31,47 +47,29 @@ class Client:
 
     @staticmethod
     def validate_name(name: str, field_name: str = "ФИО") -> bool:
-        if not isinstance(name, str):
-            raise TypeError(f"Поле '{field_name}' должно быть строкой.")
-        if not re.match(r"^[A-Za-zА-Яа-яЁё\-]+$", name):
-            raise ValueError(f"Некорректный формат поля '{field_name}': {name}")
-        return True
+        pattern = r"^[A-Za-zА-Яа-яЁё\-]+$"
+        return Client._validate_by_regex(name, pattern, field_name)
 
     @staticmethod
     def validate_passport_series(series: str) -> bool:
-        if not isinstance(series, str):
-            raise TypeError("Серия паспорта должна быть строкой.")
-        if not re.match(r"^\d{4}$", series):
-            raise ValueError(f"Серия паспорта должна содержать 4 цифры: {series}")
-        return True
+        return Client._validate_by_regex(series, r"^\d{4}$", "Серия паспорта")
 
     @staticmethod
     def validate_passport_number(number: str) -> bool:
-        if not isinstance(number, str):
-            raise TypeError("Номер паспорта должен быть строкой.")
-        if not re.match(r"^\d{6}$", number):
-            raise ValueError(f"Номер паспорта должен содержать 6 цифр: {number}")
-        return True
+        return Client._validate_by_regex(number, r"^\d{6}$", "Номер паспорта")
 
     @staticmethod
     def validate_phone(phone: str) -> bool:
-        if not isinstance(phone, str):
-            raise TypeError("Телефон должен быть строкой.")
-        if not re.match(r"^(\+7|8)\d{10}$", phone):
-            raise ValueError(f"Некорректный номер телефона: {phone}")
-        return True
+        pattern = r"^(\+7|8)\d{10}$"
+        return Client._validate_by_regex(phone, pattern, "Номер телефона")
 
     @staticmethod
     def validate_email(email: str | None) -> bool:
-        if email is None:
-            return True
-        if not isinstance(email, str):
-            raise TypeError("Email должен быть строкой.")
         pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        if not re.match(pattern, email):
-            raise ValueError(f"Некорректный email: {email}")
-        return True
-
+        return Client._validate_by_regex(
+            email, pattern, "Email", allow_none=True
+        )
+    
     # геттеры и сеттеры
     
     # --- client_id ---
