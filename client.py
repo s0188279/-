@@ -1,3 +1,4 @@
+import json
 import re
 
 class Client:
@@ -21,6 +22,61 @@ class Client:
         self.phone = phone
         self.email = email
 
+    # альтернативные конструкторы    
+    @classmethod
+    def from_dict(cls, data: dict) -> "Client":
+        # cоздание объекта из словаря Python
+        return cls(
+            client_id=int(data["client_id"]),
+            last_name=data["last_name"],
+            first_name=data["first_name"],
+            passport_series=str(data["passport_series"]),
+            passport_number=str(data["passport_number"]),
+            phone=str(data["phone"]),
+            patronymic=data.get("patronymic"),
+            email=data.get("email"),
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "Client":
+        # cоздание объекта из JSON-строки
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_string(cls, str_data: str, sep: str = ";") -> "Client":
+        """
+        cоздание объекта из строки с разделителем
+        формат: id;last_name;first_name;patronymic;passport_series;passport_number;phone;email
+        """
+        parts = [p.strip() for p in str_data.split(sep)]
+        if len(parts) < 7:
+            raise ValueError("Недостаточно данных в строке для создания Client.")
+
+        client_id = int(parts[0])
+        last_name = parts[1]
+        first_name = parts[2]
+        patronymic = parts[3] if parts[3] and parts[3] != "None" else None
+        passport_series = parts[4]
+        passport_number = parts[5]
+        phone = parts[6]
+        email = (
+            parts[7]
+            if len(parts) > 7 and parts[7] and parts[7] != "None"
+            else None
+        )
+
+        return cls(
+            client_id=client_id,
+            last_name=last_name,
+            first_name=first_name,
+            patronymic=patronymic,
+            passport_series=passport_series,
+            passport_number=passport_number,
+            phone=phone,
+            email=email,
+        )
+        
     # валидаторы
 
     @staticmethod
