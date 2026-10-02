@@ -1,7 +1,134 @@
 import json
 import re
 
-class Client:
+class BaseClient:
+    # базовый класс с общими полями краткой версии данных и логикой валидации 
+
+    def __init__(
+        self,
+        client_id: int,
+        last_name: str,
+        first_name: str,
+        phone: str,
+    ):
+        self.client_id = client_id
+        self.last_name = last_name
+        self.first_name = first_name
+        self.phone = phone
+
+    # валидаторы общие
+
+    @staticmethod
+    def _validate_by_regex(
+        value: str | None,
+        pattern: str,
+        field_name: str,
+        allow_none: bool = False,
+    ) -> bool:
+        # вспомогательный метод для устранения дублирования проверок
+        if allow_none and value is None:
+            return True
+        if not isinstance(value, str):
+            raise TypeError(f"Поле '{field_name}' должно быть строкой.")
+        if not re.match(pattern, value):
+            raise ValueError(f"Некорректный формат поля '{field_name}': {value}")
+        return True
+
+    @staticmethod
+    def validate_id(client_id: int) -> bool:
+        if not isinstance(client_id, int) or client_id <= 0:
+            raise ValueError("ID клиента должен быть положительным целым числом.")
+        return True
+
+    @staticmethod
+    def validate_name(name: str, field_name: str = "ФИО") -> bool:
+        pattern = r"^[A-Za-zА-Яа-яЁё\-]+$"
+        return BaseClient._validate_by_regex(name, pattern, field_name)
+
+    @staticmethod
+    def validate_phone(phone: str) -> bool:
+        pattern = r"^(\+7|8)\d{10}$"
+        return BaseClient._validate_by_regex(phone, pattern, "Номер телефона")
+
+    # геттеры и сеттеры
+
+    @property
+    def client_id(self) -> int:
+        return self._client_id
+
+    @client_id.setter
+    def client_id(self, value: int):
+        BaseClient.validate_id(value)
+        self._client_id = value
+
+    @property
+    def last_name(self) -> str:
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, value: str):
+        BaseClient.validate_name(value, "Фамилия")
+        self._last_name = value.capitalize()
+
+    @property
+    def first_name(self) -> str:
+        return self._first_name
+
+    @first_name.setter
+    def first_name(self, value: str):
+        BaseClient.validate_name(value, "Имя")
+        self._first_name = value.capitalize()
+
+    @property
+    def phone(self) -> str:
+        return self._phone
+
+    @phone.setter
+    def phone(self, value: str):
+        BaseClient.validate_phone(value)
+        self._phone = value
+
+    # общие методы
+
+    def get_initials(self) -> str:
+        """Формирование строки вида 'Фамилия И.'"""
+        return f"{self.last_name} {self.first_name[0]}."
+
+    def __str__(self) -> str:
+        """Краткое представление объекта."""
+        return f"{self.get_initials()} | Тел: {self.phone}"
+
+    def __eq__(self, other: object) -> bool:
+        """Сравнение по ID."""
+        if not isinstance(other, BaseClient):
+            return False
+        return self.client_id == other.client_id
+
+class ClientShort(BaseClient):
+    # краткая версия данных клиента
+
+    def __init__(
+        self,
+        client_id: int,
+        last_name: str,
+        first_name: str,
+        phone: str,
+    ):
+        super().__init__(
+            client_id=client_id,
+            last_name=last_name,
+            first_name=first_name,
+            phone=phone,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"ClientShort(id={self.client_id}, name='{self.get_initials()}', "
+            f"phone='{self.phone}')"
+        )
+
+class Client(BaseClient):
+    # полный класс сущности клиент
     def __init__(
         self,
         client_id: int,
@@ -13,15 +140,78 @@ class Client:
         patronymic: str | None = None,
         email: str | None = None,
     ):
-        self.client_id = client_id
-        self.last_name = last_name
-        self.first_name = first_name
+        super().__init__(
+            client_id=client_id,
+            last_name=last_name,
+            first_name=first_name,
+            phone=phone,
+        )
         self.patronymic = patronymic
         self.passport_series = passport_series
         self.passport_number = passport_number
-        self.phone = phone
         self.email = email
 
+    # доп валидаторы
+
+    @staticmethod
+    def validate_passport_series(series: str) -> bool:
+        """Серия паспорта: ровно 4 цифры."""
+        return BaseClient._validate_by_regex(series, r"^\d{4}$", "Серия паспорта")
+
+    @staticmethod
+    def validate_passport_number(number: str) -> bool:
+        """Номер паспорта: ровно 6 цифр."""
+        return BaseClient._validate_by_regex(number, r"^\d{6}$", "Номер паспорта")
+
+    @staticmethod
+    def validate_email(email: str | None) -> bool:
+        """Email: базовая проверка формата."""
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        return BaseClient._validate_by_regex(
+            email, pattern, "Email", allow_none=True
+        )
+
+    # геттеры и сеттеры для полных данных
+
+    @property
+    def patronymic(self) -> str | None:
+        return self._patronymic
+
+    @patronymic.setter
+    def patronymic(self, value: str | None):
+        if value is not None:
+            BaseClient.validate_name(value, "Отчество")
+            self._patronymic = value.capitalize()
+        else:
+            self._patronymic = None
+
+    @property
+    def passport_series(self) -> str:
+        return self._passport_series
+
+    @passport_series.setter
+    def passport_series(self, value: str):
+        Client.validate_passport_series(value)
+        self._passport_series = value
+
+    @property
+    def passport_number(self) -> str:
+        return self._passport_number
+
+    @passport_number.setter
+    def passport_number(self, value: str):
+        Client.validate_passport_number(value)
+        self._passport_number = value
+
+    @property
+    def email(self) -> str | None:
+        return self._email
+
+    @email.setter
+    def email(self, value: str | None):
+        Client.validate_email(value)
+        self._email = value
+    
     # альтернативные конструкторы    
     @classmethod
     def from_dict(cls, data: dict) -> "Client":
@@ -77,155 +267,19 @@ class Client:
             email=email,
         )
         
-    # валидаторы
-
-    @staticmethod
-    def _validate_by_regex(
-        value: str | None,
-        pattern: str,
-        field_name: str,
-        allow_none: bool = False,
-    ) -> bool:
-        # вспомогательный метод для устранения дублирования проверок по регулярным выражениям
-        if allow_none and value is None:
-            return True
-        if not isinstance(value, str):
-            raise TypeError(f"Поле '{field_name}' должно быть строкой.")
-        if not re.match(pattern, value):
-            raise ValueError(f"Некорректный формат поля '{field_name}': {value}")
-        return True
-
-    @staticmethod
-    def validate_id(client_id: int) -> bool:
-        if not isinstance(client_id, int) or client_id <= 0:
-            raise ValueError("ID клиента должен быть положительным целым числом.")
-        return True
-
-    @staticmethod
-    def validate_name(name: str, field_name: str = "ФИО") -> bool:
-        pattern = r"^[A-Za-zА-Яа-яЁё\-]+$"
-        return Client._validate_by_regex(name, pattern, field_name)
-
-    @staticmethod
-    def validate_passport_series(series: str) -> bool:
-        return Client._validate_by_regex(series, r"^\d{4}$", "Серия паспорта")
-
-    @staticmethod
-    def validate_passport_number(number: str) -> bool:
-        return Client._validate_by_regex(number, r"^\d{6}$", "Номер паспорта")
-
-    @staticmethod
-    def validate_phone(phone: str) -> bool:
-        pattern = r"^(\+7|8)\d{10}$"
-        return Client._validate_by_regex(phone, pattern, "Номер телефона")
-
-    @staticmethod
-    def validate_email(email: str | None) -> bool:
-        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        return Client._validate_by_regex(
-            email, pattern, "Email", allow_none=True
-        )
-    
-    # геттеры и сеттеры
-    
-    # --- client_id ---
-    @property
-    def client_id(self) -> int:
-        return self._client_id
-
-    @client_id.setter
-    def client_id(self, value: int):
-        Client.validate_id(value)
-        self._client_id = value
-
-    # --- last_name ---
-    @property
-    def last_name(self) -> str:
-        return self._last_name
-
-    @last_name.setter
-    def last_name(self, value: str):
-        Client.validate_name(value, "Фамилия")
-        self._last_name = value
-
-    # --- first_name ---
-    @property
-    def first_name(self) -> str:
-        return self._first_name
-
-    @first_name.setter
-    def first_name(self, value: str):
-        Client.validate_name(value, "Имя")
-        self._first_name = value
-
-    # --- patronymic ---
-    @property
-    def patronymic(self) -> str | None:
-        return self._patronymic
-
-    @patronymic.setter
-    def patronymic(self, value: str | None):
-                if value is not None:
-            Client.validate_name(value, "Отчество")
-            self._patronymic = value.capitalize()
-        else:
-            self._patronymic = None
-
-    # --- passport_series ---
-    @property
-    def passport_series(self) -> str:
-        return self._passport_series
-
-    @passport_series.setter
-    def passport_series(self, value: str):
-        Client.validate_passport_series(value)
-        self._passport_series = value
-
-    # --- passport_number ---
-    @property
-    def passport_number(self) -> str:
-        return self._passport_number
-
-    @passport_number.setter
-    def passport_number(self, value: str):
-        Client.validate_passport_number(value)
-        self._passport_number = value
-
-    # --- phone ---
-    @property
-    def phone(self) -> str:
-        return self._phone
-
-    @phone.setter
-    def phone(self, value: str):
-        Client.validate_phone(value)
-        self._phone = value
-
-    # --- email ---
-    @property
-    def email(self) -> str | None:
-        return self._email
-
-    @email.setter
-    def email(self, value: str | None):
-        Client.validate_email(value)
-        self._email = value
-
-    
+    # вывод и сравнение
     def get_initials(self) -> str:
         # вспомогательный метод: формирование ФИО с инициалами
         patronymic_initial = f" {self.patronymic[0]}." if self.patronymic else ""
         return f"{self.last_name} {self.first_name[0]}.{patronymic_initial}"
 
-    def __str__(self) -> str:
-        # краткая версия объекта для пользователей
-        return f"{self.get_initials()} | Тел: {self.phone}"
-
     def __repr__(self) -> str:
-        # полная версия объекта для разработчиков / отладки
+        # полная версия объекта
+        full_name = (
+            f"{self.last_name} {self.first_name} {self.patronymic or ''}".strip()
+        )
         return (
             f"Client(id={self.client_id}, "
-            f"name='{self.last_name} {self.first_name} {self.patronymic or ''}'.strip(), "
             f"passport='{self.passport_series} {self.passport_number}', "
             f"phone='{self.phone}', email='{self.email}')"
         )
@@ -242,92 +296,3 @@ class Client:
             )
         )
 
-class ClientShort:
-    # класс, содержащий краткую версию данных клиента 
-
-    def __init__(
-        self,
-        client_id: int,
-        last_name: str,
-        first_name: str,
-        phone: str,
-    ):
-        self.client_id = client_id
-        self.last_name = last_name
-        self.first_name = first_name
-        self.phone = phone
-
-    # валидаторы
-
-    @staticmethod
-    def validate_id(client_id: int) -> bool:
-        if not isinstance(client_id, int) or client_id <= 0:
-            raise ValueError("ID клиента должен быть положительным целым числом.")
-        return True
-
-    @staticmethod
-    def validate_name(name: str, field_name: str = "ФИО") -> bool:
-        pattern = r"^[A-Za-zА-Яа-яЁё\-]+$"
-        return Client._validate_by_regex(name, pattern, field_name)
-
-    @staticmethod
-    def validate_phone(phone: str) -> bool:
-        pattern = r"^(\+7|8)\d{10}$"
-        return Client._validate_by_regex(phone, pattern, "Номер телефона")
-
-    # геттеры и сеттеры
-
-    @property
-    def client_id(self) -> int:
-        return self._client_id
-
-    @client_id.setter
-    def client_id(self, value: int):
-        ClientShort.validate_id(value)
-        self._client_id = value
-
-    @property
-    def last_name(self) -> str:
-        return self._last_name
-
-    @last_name.setter
-    def last_name(self, value: str):
-        ClientShort.validate_name(value, "Фамилия")
-        self._last_name = value.capitalize()
-
-    @property
-    def first_name(self) -> str:
-        return self._first_name
-
-    @first_name.setter
-    def first_name(self, value: str):
-        ClientShort.validate_name(value, "Имя")
-        self._first_name = value.capitalize()
-
-    @property
-    def phone(self) -> str:
-        return self._phone
-
-    @phone.setter
-    def phone(self, value: str):
-        ClientShort.validate_phone(value)
-        self._phone = value
-
-    # вывод и сравнение
-
-    def get_initials(self) -> str:
-        return f"{self.last_name} {self.first_name[0]}."
-
-    def __str__(self) -> str:
-        return f"{self.get_initials()} | Тел: {self.phone}"
-
-    def __repr__(self) -> str:
-        return (
-            f"ClientShort(id={self.client_id}, name='{self.get_initials()}', "
-            f"phone='{self.phone}')"
-        )
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ClientShort):
-            return False
-        return self.client_id == other.client_id
