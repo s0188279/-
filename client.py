@@ -210,3 +210,34 @@ class Client:
     def email(self, value: str | None):
         Client.validate_email(value)
         self._email = value
+
+    
+    def get_initials(self) -> str:
+        # вспомогательный метод: формирование ФИО с инициалами
+        patronymic_initial = f" {self.patronymic[0]}." if self.patronymic else ""
+        return f"{self.last_name} {self.first_name[0]}.{patronymic_initial}"
+
+    def __str__(self) -> str:
+        # краткая версия объекта для пользователей
+        return f"{self.get_initials()} | Тел: {self.phone}"
+
+    def __repr__(self) -> str:
+        # полная версия объекта для разработчиков / отладки
+        return (
+            f"Client(id={self.client_id}, "
+            f"name='{self.last_name} {self.first_name} {self.patronymic or ''}'.strip(), "
+            f"passport='{self.passport_series} {self.passport_number}', "
+            f"phone='{self.phone}', email='{self.email}')"
+        )
+
+    def __eq__(self, other: object) -> bool:
+        # сравнение объектов на равенство по паспортным данным или ID
+        if not isinstance(other, Client):
+            return False
+        return (
+            self.client_id == other.client_id
+            or (
+                self.passport_series == other.passport_series
+                and self.passport_number == other.passport_number
+            )
+        )
