@@ -241,3 +241,93 @@ class Client:
                 and self.passport_number == other.passport_number
             )
         )
+
+class ClientShort:
+    # класс, содержащий краткую версию данных клиента 
+
+    def __init__(
+        self,
+        client_id: int,
+        last_name: str,
+        first_name: str,
+        phone: str,
+    ):
+        self.client_id = client_id
+        self.last_name = last_name
+        self.first_name = first_name
+        self.phone = phone
+
+    # валидаторы
+
+    @staticmethod
+    def validate_id(client_id: int) -> bool:
+        if not isinstance(client_id, int) or client_id <= 0:
+            raise ValueError("ID клиента должен быть положительным целым числом.")
+        return True
+
+    @staticmethod
+    def validate_name(name: str, field_name: str = "ФИО") -> bool:
+        pattern = r"^[A-Za-zА-Яа-яЁё\-]+$"
+        return Client._validate_by_regex(name, pattern, field_name)
+
+    @staticmethod
+    def validate_phone(phone: str) -> bool:
+        pattern = r"^(\+7|8)\d{10}$"
+        return Client._validate_by_regex(phone, pattern, "Номер телефона")
+
+    # геттеры и сеттеры
+
+    @property
+    def client_id(self) -> int:
+        return self._client_id
+
+    @client_id.setter
+    def client_id(self, value: int):
+        ClientShort.validate_id(value)
+        self._client_id = value
+
+    @property
+    def last_name(self) -> str:
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, value: str):
+        ClientShort.validate_name(value, "Фамилия")
+        self._last_name = value.capitalize()
+
+    @property
+    def first_name(self) -> str:
+        return self._first_name
+
+    @first_name.setter
+    def first_name(self, value: str):
+        ClientShort.validate_name(value, "Имя")
+        self._first_name = value.capitalize()
+
+    @property
+    def phone(self) -> str:
+        return self._phone
+
+    @phone.setter
+    def phone(self, value: str):
+        ClientShort.validate_phone(value)
+        self._phone = value
+
+    # вывод и сравнение
+
+    def get_initials(self) -> str:
+        return f"{self.last_name} {self.first_name[0]}."
+
+    def __str__(self) -> str:
+        return f"{self.get_initials()} | Тел: {self.phone}"
+
+    def __repr__(self) -> str:
+        return (
+            f"ClientShort(id={self.client_id}, name='{self.get_initials()}', "
+            f"phone='{self.phone}')"
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ClientShort):
+            return False
+        return self.client_id == other.client_id
